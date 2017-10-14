@@ -6,6 +6,7 @@ const job = require('../controllers/job.js');
 
 router.post('/resume', resume.uploadHandler);
 router.post('/signUp', userHandler.signUp);
+router.post('/scanForUser', userHandler.scanforUser);
 router.post('/job', job.handleJobAdd);
 
 

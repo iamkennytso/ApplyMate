@@ -1,40 +1,28 @@
 import React from 'react';
 import firebase from 'firebase';
 import { browserHistory, Route, Redirect, Switch } from 'react-router-dom';
-import fire from './Firebase.js'
+import { Alert, Modal } from 'react-bootstrap';
+import fire from './Firebase.js';
 import Signup from './signup.js';
 import Login from './login.js';
 import Home from './home.js';
-import Auth from './Auth.js'
+import Auth from './Auth.js';
 
 class App extends React.Component {
-  static GitAuth(e) {
-    e.preventDefault();
-    const provider = new firebase.auth.GithubAuthProvider();
-    firebase.auth().signInWithPopup(provider)
-      .then((result) => {
-        console.log('token', result.credential.accessToken);
-        console.log('user', result.user);
-      })
-      .catch((error) => {
-        console.log('Git Auth Error:', error.code);
-        console.log(error.message);
-        console.log(error.email);
-        console.log(error.credential);
-      });
-  }
-
   constructor(props) {
     super(props);
     this.state = {
       user: null,
       isLoggedIn: false,
+      gitMerging: true,
     };
     this.setUser = this.setUser.bind(this);
-    this.setIsLoggedIn = this.setIsLoggedIn.bind(this);
     this.signUp = this.signUp.bind(this);
     this.signIn = this.signIn.bind(this);
     this.signOut = this.signOut.bind(this);
+    this.GitAuth = this.GitAuth.bind(this);
+    this.GitMerge = this.GitMerge.bind(this);
+    this.closeMerge = this.closeMerge.bind(this);
     this.TESTBUTTON = this.TESTBUTTON.bind(this);
   }
   componentWillMount() {
@@ -42,20 +30,14 @@ class App extends React.Component {
       if (user) {
         this.setState({
           user,
-          isLoggedIn: true,
+          isLoggedIn: false,
         });
       }
     });
   }
-
   setUser(user, bool) {
     this.setState({
       user,
-      isLoggedIn: bool,
-    });
-  }
-  setIsLoggedIn(bool) {
-    this.setState({
       isLoggedIn: bool,
     });
   }
@@ -83,7 +65,31 @@ class App extends React.Component {
       }
     });
   }
-
+  closeMerge() {
+    this.setState({
+      gitMerging: false,
+    });
+  }
+  GitAuth() {
+    Auth.gitAuth((error, win) => {
+      if (error) {
+        if (error.code === 'auth/account-exists-with-different-credential') {
+          this.setState({
+            gitMerging: true,
+            user: error.email,
+          });
+        } else {
+          alert(error);
+        }
+      } else {
+        this.setUser(win, true);
+      }
+    }, (whatever) => { console.log(whatever.user.email); });
+  }
+  GitMerge(e) {
+    e.preventDefault();
+    Auth.gitAuthMerge(this.mergePass.value, () => { this.closeMerge(); });
+  }
   TESTBUTTON(e) {
     console.log('firebase.auth().currentUser', firebase.auth().currentUser);
     console.log('this.state.user', this.state.user);
@@ -106,12 +112,14 @@ class App extends React.Component {
       />
     );
   }
+
   render() {
     return (
       <div>
+
         <Switch>
           {this.routes('/signup', <Signup signUp={this.signUp} TESTBUTTON={this.TESTBUTTON} />, <Redirect to="/home" />)}
-          {this.routes('/login', <Login signIn={this.signIn} TESTBUTTON={this.TESTBUTTON} />, <Redirect to="/home" />)}
+          {this.routes('/login', <Login signIn={this.signIn} GitAuth={this.GitAuth} TESTBUTTON={this.TESTBUTTON} signOut={this.signout} />, <Redirect to="/home" />)}
           {this.routes('/home', <Redirect to="/login" />, <Home signOut={this.signOut} user={this.state.user} TESTBUTTON={this.TESTBUTTON} />)}
           <Route
             exact
